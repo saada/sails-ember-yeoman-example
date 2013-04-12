@@ -1,2 +1,1 @@
-# jadeapp
-### a Sails application
+# Sails + Ember + Yeoman Example
