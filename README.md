@@ -36,10 +36,12 @@ Modify the grunt file's connect PORT to Sails's port:
                 hostname: 'localhost'
             },
     ...        
-Finally, start Yeoman (Grunt) in a terminal:
-
-    grunt server
-    
-And lift your sails!!
+Finally, lift your sails in a terminal:
 
     sails lift
+    
+And start Yeoman (Grunt) in another terminal!
+
+    grunt server
+
+Additionally, I installed h5bp in this example.
