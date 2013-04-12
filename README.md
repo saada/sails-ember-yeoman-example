@@ -1,0 +1,2 @@
+# jadeapp
+### a Sails application
