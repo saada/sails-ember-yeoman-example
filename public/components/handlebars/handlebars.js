@@ -27,154 +27,156 @@ THE SOFTWARE.
 /*jshint eqnull:true*/
 this.Handlebars = {};
 
-(function(Handlebars) {
+((Handlebars => {
+  Handlebars.VERSION = "1.0.0-rc.3";
+  Handlebars.COMPILER_REVISION = 2;
 
-Handlebars.VERSION = "1.0.0-rc.3";
-Handlebars.COMPILER_REVISION = 2;
+  Handlebars.REVISION_CHANGES = {
+    1: '<= 1.0.rc.2', // 1.0.rc.2 is actually rev2 but doesn't report it
+    2: '>= 1.0.0-rc.3'
+  };
 
-Handlebars.REVISION_CHANGES = {
-  1: '<= 1.0.rc.2', // 1.0.rc.2 is actually rev2 but doesn't report it
-  2: '>= 1.0.0-rc.3'
-};
+  Handlebars.helpers  = {};
+  Handlebars.partials = {};
 
-Handlebars.helpers  = {};
-Handlebars.partials = {};
+  Handlebars.registerHelper = function(name, fn, inverse) {
+    if(inverse) { fn.not = inverse; }
+    this.helpers[name] = fn;
+  };
 
-Handlebars.registerHelper = function(name, fn, inverse) {
-  if(inverse) { fn.not = inverse; }
-  this.helpers[name] = fn;
-};
+  Handlebars.registerPartial = function(name, str) {
+    this.partials[name] = str;
+  };
 
-Handlebars.registerPartial = function(name, str) {
-  this.partials[name] = str;
-};
-
-Handlebars.registerHelper('helperMissing', function(arg) {
-  if(arguments.length === 2) {
-    return undefined;
-  } else {
-    throw new Error("Could not find property '" + arg + "'");
-  }
-});
-
-var toString = Object.prototype.toString, functionType = "[object Function]";
-
-Handlebars.registerHelper('blockHelperMissing', function(context, options) {
-  var inverse = options.inverse || function() {}, fn = options.fn;
-
-
-  var ret = "";
-  var type = toString.call(context);
-
-  if(type === functionType) { context = context.call(this); }
-
-  if(context === true) {
-    return fn(this);
-  } else if(context === false || context == null) {
-    return inverse(this);
-  } else if(type === "[object Array]") {
-    if(context.length > 0) {
-      return Handlebars.helpers.each(context, options);
+  Handlebars.registerHelper('helperMissing', function(arg) {
+    if(arguments.length === 2) {
+      return undefined;
     } else {
+      throw new Error("Could not find property '" + arg + "'");
+    }
+  });
+
+  var toString = Object.prototype.toString;
+  var functionType = "[object Function]";
+
+  Handlebars.registerHelper('blockHelperMissing', function(context, options) {
+    var inverse = options.inverse || (() => {});
+    var fn = options.fn;
+
+
+    var ret = "";
+    var type = toString.call(context);
+
+    if(type === functionType) { context = context.call(this); }
+
+    if(context === true) {
+      return fn(this);
+    } else if(context === false || context == null) {
       return inverse(this);
-    }
-  } else {
-    return fn(context);
-  }
-});
-
-Handlebars.K = function() {};
-
-Handlebars.createFrame = Object.create || function(object) {
-  Handlebars.K.prototype = object;
-  var obj = new Handlebars.K();
-  Handlebars.K.prototype = null;
-  return obj;
-};
-
-Handlebars.logger = {
-  DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, level: 3,
-
-  methodMap: {0: 'debug', 1: 'info', 2: 'warn', 3: 'error'},
-
-  // can be overridden in the host environment
-  log: function(level, obj) {
-    if (Handlebars.logger.level <= level) {
-      var method = Handlebars.logger.methodMap[level];
-      if (typeof console !== 'undefined' && console[method]) {
-        console[method].call(console, obj);
-      }
-    }
-  }
-};
-
-Handlebars.log = function(level, obj) { Handlebars.logger.log(level, obj); };
-
-Handlebars.registerHelper('each', function(context, options) {
-  var fn = options.fn, inverse = options.inverse;
-  var i = 0, ret = "", data;
-
-  if (options.data) {
-    data = Handlebars.createFrame(options.data);
-  }
-
-  if(context && typeof context === 'object') {
-    if(context instanceof Array){
-      for(var j = context.length; i<j; i++) {
-        if (data) { data.index = i; }
-        ret = ret + fn(context[i], { data: data });
+    } else if(type === "[object Array]") {
+      if(context.length > 0) {
+        return Handlebars.helpers.each(context, options);
+      } else {
+        return inverse(this);
       }
     } else {
-      for(var key in context) {
-        if(context.hasOwnProperty(key)) {
-          if(data) { data.key = key; }
-          ret = ret + fn(context[key], {data: data});
-          i++;
+      return fn(context);
+    }
+  });
+
+  Handlebars.K = () => {};
+
+  Handlebars.createFrame = Object.create || (object => {
+    Handlebars.K.prototype = object;
+    var obj = new Handlebars.K();
+    Handlebars.K.prototype = null;
+    return obj;
+  });
+
+  Handlebars.logger = {
+    DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, level: 3,
+
+    methodMap: {0: 'debug', 1: 'info', 2: 'warn', 3: 'error'},
+
+    // can be overridden in the host environment
+    log(level, obj) {
+      if (Handlebars.logger.level <= level) {
+        var method = Handlebars.logger.methodMap[level];
+        if (typeof console !== 'undefined' && console[method]) {
+          console[method].call(console, obj);
         }
       }
     }
-  }
+  };
 
-  if(i === 0){
-    ret = inverse(this);
-  }
+  Handlebars.log = (level, obj) => { Handlebars.logger.log(level, obj); };
 
-  return ret;
-});
+  Handlebars.registerHelper('each', function(context, options) {
+    var fn = options.fn;
+    var inverse = options.inverse;
+    var i = 0;
+    var ret = "";
+    var data;
 
-Handlebars.registerHelper('if', function(context, options) {
-  var type = toString.call(context);
-  if(type === functionType) { context = context.call(this); }
+    if (options.data) {
+      data = Handlebars.createFrame(options.data);
+    }
 
-  if(!context || Handlebars.Utils.isEmpty(context)) {
-    return options.inverse(this);
-  } else {
-    return options.fn(this);
-  }
-});
+    if(context && typeof context === 'object') {
+      if(context instanceof Array){
+        for(var j = context.length; i<j; i++) {
+          if (data) { data.index = i; }
+          ret = ret + fn(context[i], { data });
+        }
+      } else {
+        for(var key in context) {
+          if(context.hasOwnProperty(key)) {
+            if(data) { data.key = key; }
+            ret = ret + fn(context[key], {data});
+            i++;
+          }
+        }
+      }
+    }
 
-Handlebars.registerHelper('unless', function(context, options) {
-  var fn = options.fn, inverse = options.inverse;
-  options.fn = inverse;
-  options.inverse = fn;
+    if(i === 0){
+      ret = inverse(this);
+    }
 
-  return Handlebars.helpers['if'].call(this, context, options);
-});
+    return ret;
+  });
 
-Handlebars.registerHelper('with', function(context, options) {
-  return options.fn(context);
-});
+  Handlebars.registerHelper('if', function(context, options) {
+    var type = toString.call(context);
+    if(type === functionType) { context = context.call(this); }
 
-Handlebars.registerHelper('log', function(context, options) {
-  var level = options.data && options.data.level != null ? parseInt(options.data.level, 10) : 1;
-  Handlebars.log(level, context);
-});
+    if(!context || Handlebars.Utils.isEmpty(context)) {
+      return options.inverse(this);
+    } else {
+      return options.fn(this);
+    }
+  });
 
-}(this.Handlebars));
+  Handlebars.registerHelper('unless', function(context, options) {
+    var fn = options.fn;
+    var inverse = options.inverse;
+    options.fn = inverse;
+    options.inverse = fn;
+
+    return Handlebars.helpers['if'].call(this, context, options);
+  });
+
+  Handlebars.registerHelper('with', (context, options) => options.fn(context));
+
+  Handlebars.registerHelper('log', (context, options) => {
+    var level = options.data && options.data.level != null ? parseInt(options.data.level, 10) : 1;
+    Handlebars.log(level, context);
+  });
+})(this.Handlebars));
 ;
 // lib/handlebars/compiler/parser.js
 /* Jison generated parser */
-var handlebars = (function(){
+var handlebars = ((() => {
 var parser = {trace: function trace() { },
 yy: {},
 symbols_: {"error":2,"root":3,"program":4,"EOF":5,"simpleInverse":6,"statements":7,"statement":8,"openInverse":9,"closeBlock":10,"openBlock":11,"mustache":12,"partial":13,"CONTENT":14,"COMMENT":15,"OPEN_BLOCK":16,"inMustache":17,"CLOSE":18,"OPEN_INVERSE":19,"OPEN_ENDBLOCK":20,"path":21,"OPEN":22,"OPEN_UNESCAPED":23,"OPEN_PARTIAL":24,"partialName":25,"params":26,"hash":27,"DATA":28,"param":29,"STRING":30,"INTEGER":31,"BOOLEAN":32,"hashSegments":33,"hashSegment":34,"ID":35,"EQUALS":36,"PARTIAL_NAME":37,"pathSegments":38,"SEP":39,"$accept":0,"$end":1},
@@ -286,111 +288,131 @@ parseError: function parseError(str, hash) {
     throw new Error(str);
 },
 parse: function parse(input) {
-    var self = this, stack = [0], vstack = [null], lstack = [], table = this.table, yytext = "", yylineno = 0, yyleng = 0, recovering = 0, TERROR = 2, EOF = 1;
-    this.lexer.setInput(input);
-    this.lexer.yy = this.yy;
-    this.yy.lexer = this.lexer;
-    this.yy.parser = this;
-    if (typeof this.lexer.yylloc == "undefined")
-        this.lexer.yylloc = {};
-    var yyloc = this.lexer.yylloc;
-    lstack.push(yyloc);
-    var ranges = this.lexer.options && this.lexer.options.ranges;
-    if (typeof this.yy.parseError === "function")
-        this.parseError = this.yy.parseError;
-    function popStack(n) {
-        stack.length = stack.length - 2 * n;
-        vstack.length = vstack.length - n;
-        lstack.length = lstack.length - n;
-    }
-    function lex() {
-        var token;
-        token = self.lexer.lex() || 1;
-        if (typeof token !== "number") {
-            token = self.symbols_[token] || token;
-        }
-        return token;
-    }
-    var symbol, preErrorSymbol, state, action, a, r, yyval = {}, p, len, newState, expected;
-    while (true) {
-        state = stack[stack.length - 1];
-        if (this.defaultActions[state]) {
-            action = this.defaultActions[state];
-        } else {
-            if (symbol === null || typeof symbol == "undefined") {
-                symbol = lex();
-            }
-            action = table[state] && table[state][symbol];
-        }
-        if (typeof action === "undefined" || !action.length || !action[0]) {
-            var errStr = "";
-            if (!recovering) {
-                expected = [];
-                for (p in table[state])
-                    if (this.terminals_[p] && p > 2) {
-                        expected.push("'" + this.terminals_[p] + "'");
-                    }
-                if (this.lexer.showPosition) {
-                    errStr = "Parse error on line " + (yylineno + 1) + ":\n" + this.lexer.showPosition() + "\nExpecting " + expected.join(", ") + ", got '" + (this.terminals_[symbol] || symbol) + "'";
-                } else {
-                    errStr = "Parse error on line " + (yylineno + 1) + ": Unexpected " + (symbol == 1?"end of input":"'" + (this.terminals_[symbol] || symbol) + "'");
-                }
-                this.parseError(errStr, {text: this.lexer.match, token: this.terminals_[symbol] || symbol, line: this.lexer.yylineno, loc: yyloc, expected: expected});
-            }
-        }
-        if (action[0] instanceof Array && action.length > 1) {
-            throw new Error("Parse Error: multiple actions possible at state: " + state + ", token: " + symbol);
-        }
-        switch (action[0]) {
-        case 1:
-            stack.push(symbol);
-            vstack.push(this.lexer.yytext);
-            lstack.push(this.lexer.yylloc);
-            stack.push(action[1]);
-            symbol = null;
-            if (!preErrorSymbol) {
-                yyleng = this.lexer.yyleng;
-                yytext = this.lexer.yytext;
-                yylineno = this.lexer.yylineno;
-                yyloc = this.lexer.yylloc;
-                if (recovering > 0)
-                    recovering--;
-            } else {
-                symbol = preErrorSymbol;
-                preErrorSymbol = null;
-            }
-            break;
-        case 2:
-            len = this.productions_[action[1]][1];
-            yyval.$ = vstack[vstack.length - len];
-            yyval._$ = {first_line: lstack[lstack.length - (len || 1)].first_line, last_line: lstack[lstack.length - 1].last_line, first_column: lstack[lstack.length - (len || 1)].first_column, last_column: lstack[lstack.length - 1].last_column};
-            if (ranges) {
-                yyval._$.range = [lstack[lstack.length - (len || 1)].range[0], lstack[lstack.length - 1].range[1]];
-            }
-            r = this.performAction.call(yyval, yytext, yyleng, yylineno, this.yy, action[1], vstack, lstack);
-            if (typeof r !== "undefined") {
-                return r;
-            }
-            if (len) {
-                stack = stack.slice(0, -1 * len * 2);
-                vstack = vstack.slice(0, -1 * len);
-                lstack = lstack.slice(0, -1 * len);
-            }
-            stack.push(this.productions_[action[1]][0]);
-            vstack.push(yyval.$);
-            lstack.push(yyval._$);
-            newState = table[stack[stack.length - 2]][stack[stack.length - 1]];
-            stack.push(newState);
-            break;
-        case 3:
-            return true;
-        }
-    }
-    return true;
+  var self = this;
+  var stack = [0];
+  var vstack = [null];
+  var lstack = [];
+  var table = this.table;
+  var yytext = "";
+  var yylineno = 0;
+  var yyleng = 0;
+  var recovering = 0;
+  var TERROR = 2;
+  var EOF = 1;
+  this.lexer.setInput(input);
+  this.lexer.yy = this.yy;
+  this.yy.lexer = this.lexer;
+  this.yy.parser = this;
+  if (typeof this.lexer.yylloc == "undefined")
+      this.lexer.yylloc = {};
+  var yyloc = this.lexer.yylloc;
+  lstack.push(yyloc);
+  var ranges = this.lexer.options && this.lexer.options.ranges;
+  if (typeof this.yy.parseError === "function")
+      this.parseError = this.yy.parseError;
+  function popStack(n) {
+      stack.length = stack.length - 2 * n;
+      vstack.length = vstack.length - n;
+      lstack.length = lstack.length - n;
+  }
+  function lex() {
+      var token;
+      token = self.lexer.lex() || 1;
+      if (typeof token !== "number") {
+          token = self.symbols_[token] || token;
+      }
+      return token;
+  }
+  var symbol;
+  var preErrorSymbol;
+  var state;
+  var action;
+  var a;
+  var r;
+  var yyval = {};
+  var p;
+  var len;
+  var newState;
+  var expected;
+  while (true) {
+      state = stack[stack.length - 1];
+      if (this.defaultActions[state]) {
+          action = this.defaultActions[state];
+      } else {
+          if (symbol === null || typeof symbol == "undefined") {
+              symbol = lex();
+          }
+          action = table[state] && table[state][symbol];
+      }
+      if (typeof action === "undefined" || !action.length || !action[0]) {
+          var errStr = "";
+          if (!recovering) {
+              expected = [];
+              for (p in table[state])
+                  if (this.terminals_[p] && p > 2) {
+                      expected.push("'" + this.terminals_[p] + "'");
+                  }
+              if (this.lexer.showPosition) {
+                  errStr = "Parse error on line " + (yylineno + 1) + ":\n" + this.lexer.showPosition() + "\nExpecting " + expected.join(", ") + ", got '" + (this.terminals_[symbol] || symbol) + "'";
+              } else {
+                  errStr = "Parse error on line " + (yylineno + 1) + ": Unexpected " + (symbol == 1?"end of input":"'" + (this.terminals_[symbol] || symbol) + "'");
+              }
+              this.parseError(errStr, {text: this.lexer.match, token: this.terminals_[symbol] || symbol, line: this.lexer.yylineno, loc: yyloc, expected});
+          }
+      }
+      if (action[0] instanceof Array && action.length > 1) {
+          throw new Error("Parse Error: multiple actions possible at state: " + state + ", token: " + symbol);
+      }
+      switch (action[0]) {
+      case 1:
+          stack.push(symbol);
+          vstack.push(this.lexer.yytext);
+          lstack.push(this.lexer.yylloc);
+          stack.push(action[1]);
+          symbol = null;
+          if (!preErrorSymbol) {
+              yyleng = this.lexer.yyleng;
+              yytext = this.lexer.yytext;
+              yylineno = this.lexer.yylineno;
+              yyloc = this.lexer.yylloc;
+              if (recovering > 0)
+                  recovering--;
+          } else {
+              symbol = preErrorSymbol;
+              preErrorSymbol = null;
+          }
+          break;
+      case 2:
+          len = this.productions_[action[1]][1];
+          yyval.$ = vstack[vstack.length - len];
+          yyval._$ = {first_line: lstack[lstack.length - (len || 1)].first_line, last_line: lstack[lstack.length - 1].last_line, first_column: lstack[lstack.length - (len || 1)].first_column, last_column: lstack[lstack.length - 1].last_column};
+          if (ranges) {
+              yyval._$.range = [lstack[lstack.length - (len || 1)].range[0], lstack[lstack.length - 1].range[1]];
+          }
+          r = this.performAction.call(yyval, yytext, yyleng, yylineno, this.yy, action[1], vstack, lstack);
+          if (typeof r !== "undefined") {
+              return r;
+          }
+          if (len) {
+              stack = stack.slice(0, -1 * len * 2);
+              vstack = vstack.slice(0, -1 * len);
+              lstack = lstack.slice(0, -1 * len);
+          }
+          stack.push(this.productions_[action[1]][0]);
+          vstack.push(yyval.$);
+          lstack.push(yyval._$);
+          newState = table[stack[stack.length - 2]][stack[stack.length - 1]];
+          stack.push(newState);
+          break;
+      case 3:
+          return true;
+      }
+  }
+  return true;
 }
 };
 /* Jison generated lexer */
-var lexer = (function(){
+var lexer = ((() => {
 var lexer = ({EOF:1,
 parseError:function parseError(str, hash) {
         if (this.yy.parser) {
@@ -399,7 +421,7 @@ parseError:function parseError(str, hash) {
             throw new Error(str);
         }
     },
-setInput:function (input) {
+setInput(input) {
         this._input = input;
         this._more = this._less = this.done = false;
         this.yylineno = this.yyleng = 0;
@@ -410,7 +432,7 @@ setInput:function (input) {
         this.offset = 0;
         return this;
     },
-input:function () {
+input() {
         var ch = this._input[0];
         this.yytext += ch;
         this.yyleng++;
@@ -429,7 +451,7 @@ input:function () {
         this._input = this._input.slice(1);
         return ch;
     },
-unput:function (ch) {
+unput(ch) {
         var len = ch.length;
         var lines = ch.split(/(?:\r\n?|\n)/g);
 
@@ -457,83 +479,83 @@ unput:function (ch) {
         }
         return this;
     },
-more:function () {
+more() {
         this._more = true;
         return this;
     },
-less:function (n) {
+less(n) {
         this.unput(this.match.slice(n));
     },
-pastInput:function () {
+pastInput() {
         var past = this.matched.substr(0, this.matched.length - this.match.length);
         return (past.length > 20 ? '...':'') + past.substr(-20).replace(/\n/g, "");
     },
-upcomingInput:function () {
+upcomingInput() {
         var next = this.match;
         if (next.length < 20) {
             next += this._input.substr(0, 20-next.length);
         }
         return (next.substr(0,20)+(next.length > 20 ? '...':'')).replace(/\n/g, "");
     },
-showPosition:function () {
+showPosition() {
         var pre = this.pastInput();
         var c = new Array(pre.length + 1).join("-");
         return pre + this.upcomingInput() + "\n" + c+"^";
     },
-next:function () {
-        if (this.done) {
-            return this.EOF;
-        }
-        if (!this._input) this.done = true;
+next() {
+  if (this.done) {
+      return this.EOF;
+  }
+  if (!this._input) this.done = true;
 
-        var token,
-            match,
-            tempMatch,
-            index,
-            col,
-            lines;
-        if (!this._more) {
-            this.yytext = '';
-            this.match = '';
-        }
-        var rules = this._currentRules();
-        for (var i=0;i < rules.length; i++) {
-            tempMatch = this._input.match(this.rules[rules[i]]);
-            if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
-                match = tempMatch;
-                index = i;
-                if (!this.options.flex) break;
-            }
-        }
-        if (match) {
-            lines = match[0].match(/(?:\r\n?|\n).*/g);
-            if (lines) this.yylineno += lines.length;
-            this.yylloc = {first_line: this.yylloc.last_line,
-                           last_line: this.yylineno+1,
-                           first_column: this.yylloc.last_column,
-                           last_column: lines ? lines[lines.length-1].length-lines[lines.length-1].match(/\r?\n?/)[0].length : this.yylloc.last_column + match[0].length};
-            this.yytext += match[0];
-            this.match += match[0];
-            this.matches = match;
-            this.yyleng = this.yytext.length;
-            if (this.options.ranges) {
-                this.yylloc.range = [this.offset, this.offset += this.yyleng];
-            }
-            this._more = false;
-            this._input = this._input.slice(match[0].length);
-            this.matched += match[0];
-            token = this.performAction.call(this, this.yy, this, rules[index],this.conditionStack[this.conditionStack.length-1]);
-            if (this.done && this._input) this.done = false;
-            if (token) return token;
-            else return;
-        }
-        if (this._input === "") {
-            return this.EOF;
-        } else {
-            return this.parseError('Lexical error on line '+(this.yylineno+1)+'. Unrecognized text.\n'+this.showPosition(),
-                    {text: "", token: null, line: this.yylineno});
-        }
-    },
+  var token;
+  var match;
+  var tempMatch;
+  var index;
+  var col;
+  var lines;
+  if (!this._more) {
+      this.yytext = '';
+      this.match = '';
+  }
+  var rules = this._currentRules();
+  for (var i=0;i < rules.length; i++) {
+      tempMatch = this._input.match(this.rules[rules[i]]);
+      if (tempMatch && (!match || tempMatch[0].length > match[0].length)) {
+          match = tempMatch;
+          index = i;
+          if (!this.options.flex) break;
+      }
+  }
+  if (match) {
+      lines = match[0].match(/(?:\r\n?|\n).*/g);
+      if (lines) this.yylineno += lines.length;
+      this.yylloc = {first_line: this.yylloc.last_line,
+                     last_line: this.yylineno+1,
+                     first_column: this.yylloc.last_column,
+                     last_column: lines ? lines[lines.length-1].length-lines[lines.length-1].match(/\r?\n?/)[0].length : this.yylloc.last_column + match[0].length};
+      this.yytext += match[0];
+      this.match += match[0];
+      this.matches = match;
+      this.yyleng = this.yytext.length;
+      if (this.options.ranges) {
+          this.yylloc.range = [this.offset, this.offset += this.yyleng];
+      }
+      this._more = false;
+      this._input = this._input.slice(match[0].length);
+      this.matched += match[0];
+      token = this.performAction.call(this, this.yy, this, rules[index],this.conditionStack[this.conditionStack.length-1]);
+      if (this.done && this._input) this.done = false;
+      if (token) return token;
+      else return;
+  }
+  if (this._input === "") {
+      return this.EOF;
+  } else {
+      return this.parseError('Lexical error on line '+(this.yylineno+1)+'. Unrecognized text.\n'+this.showPosition(),
+              {text: "", token: null, line: this.yylineno});
+  }
+},
 lex:function lex() {
         var r = this.next();
         if (typeof r !== 'undefined') {
@@ -551,7 +573,7 @@ popState:function popState() {
 _currentRules:function _currentRules() {
         return this.conditions[this.conditionStack[this.conditionStack.length-1]].rules;
     },
-topState:function () {
+topState() {
         return this.conditionStack[this.conditionStack.length-2];
     },
 pushState:function begin(condition) {
@@ -640,15 +662,15 @@ break;
 };
 lexer.rules = [/^(?:[^\x00]*?(?=(\{\{)))/,/^(?:[^\x00]+)/,/^(?:[^\x00]{2,}?(?=(\{\{|$)))/,/^(?:[\s\S]*?--\}\})/,/^(?:\{\{>)/,/^(?:\{\{#)/,/^(?:\{\{\/)/,/^(?:\{\{\^)/,/^(?:\{\{\s*else\b)/,/^(?:\{\{\{)/,/^(?:\{\{&)/,/^(?:\{\{!--)/,/^(?:\{\{![\s\S]*?\}\})/,/^(?:\{\{)/,/^(?:=)/,/^(?:\.(?=[} ]))/,/^(?:\.\.)/,/^(?:[\/.])/,/^(?:\s+)/,/^(?:\}\}\})/,/^(?:\}\})/,/^(?:"(\\["]|[^"])*")/,/^(?:'(\\[']|[^'])*')/,/^(?:@[a-zA-Z]+)/,/^(?:true(?=[}\s]))/,/^(?:false(?=[}\s]))/,/^(?:[0-9]+(?=[}\s]))/,/^(?:[a-zA-Z0-9_$-]+(?=[=}\s\/.]))/,/^(?:\[[^\]]*\])/,/^(?:.)/,/^(?:\s+)/,/^(?:[a-zA-Z0-9_$-/]+)/,/^(?:$)/];
 lexer.conditions = {"mu":{"rules":[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,32],"inclusive":false},"emu":{"rules":[2],"inclusive":false},"com":{"rules":[3],"inclusive":false},"par":{"rules":[30,31],"inclusive":false},"INITIAL":{"rules":[0,1,32],"inclusive":true}};
-return lexer;})()
+return lexer;}))()
 parser.lexer = lexer;
 function Parser () { this.yy = {}; }Parser.prototype = parser;parser.Parser = Parser;
 return new Parser;
-})();;
+}))();;
 // lib/handlebars/compiler/base.js
 Handlebars.Parser = handlebars;
 
-Handlebars.parse = function(input) {
+Handlebars.parse = input => {
 
   // Just return if an already-compile AST was passed in.
   if(input.constructor === Handlebars.AST.ProgramNode) { return input; }
@@ -657,11 +679,9 @@ Handlebars.parse = function(input) {
   return Handlebars.Parser.parse(input);
 };
 
-Handlebars.print = function(ast) {
-  return new Handlebars.PrintVisitor().accept(ast);
-};;
+Handlebars.print = ast => new Handlebars.PrintVisitor().accept(ast);;
 // lib/handlebars/compiler/ast.js
-(function() {
+((() => {
 
   Handlebars.AST = {};
 
@@ -699,7 +719,7 @@ Handlebars.print = function(ast) {
     this.context      = context;
   };
 
-  var verifyMatch = function(open, close) {
+  var verifyMatch = (open, close) => {
     if(open.original !== close.original) {
       throw new Handlebars.Exception(open.original + " doesn't match " + close.original);
     }
@@ -731,7 +751,8 @@ Handlebars.print = function(ast) {
     this.type = "ID";
     this.original = parts.join(".");
 
-    var dig = [], depth = 0;
+    var dig = [];
+    var depth = 0;
 
     for(var i=0,l=parts.length; i<l; i++) {
       var part = parts[i];
@@ -788,7 +809,7 @@ Handlebars.print = function(ast) {
     this.comment = comment;
   };
 
-})();;
+}))();;
 // lib/handlebars/utils.js
 
 var errorProps = ['description', 'fileName', 'lineNumber', 'message', 'name', 'number', 'stack'];
@@ -811,7 +832,7 @@ Handlebars.SafeString.prototype.toString = function() {
   return this.string.toString();
 };
 
-(function() {
+((() => {
   var escape = {
     "&": "&amp;",
     "<": "&lt;",
@@ -824,12 +845,10 @@ Handlebars.SafeString.prototype.toString = function() {
   var badChars = /[&<>"'`]/g;
   var possible = /[&<>"'`]/;
 
-  var escapeChar = function(chr) {
-    return escape[chr] || "&amp;";
-  };
+  var escapeChar = chr => escape[chr] || "&amp;";
 
   Handlebars.Utils = {
-    escapeExpression: function(string) {
+    escapeExpression(string) {
       // don't escape SafeStrings, since they're already safe
       if (string instanceof Handlebars.SafeString) {
         return string.toString();
@@ -841,7 +860,7 @@ Handlebars.SafeString.prototype.toString = function() {
       return string.replace(badChars, escapeChar);
     },
 
-    isEmpty: function(value) {
+    isEmpty(value) {
       if (!value && value !== 0) {
         return true;
       } else if(Object.prototype.toString.call(value) === "[object Array]" && value.length === 0) {
@@ -851,14 +870,14 @@ Handlebars.SafeString.prototype.toString = function() {
       }
     }
   };
-})();;
+}))();;
 // lib/handlebars/compiler/compiler.js
 
 /*jshint eqnull:true*/
-Handlebars.Compiler = function() {};
-Handlebars.JavaScriptCompiler = function() {};
+Handlebars.Compiler = () => {};
+Handlebars.JavaScriptCompiler = () => {};
 
-(function(Compiler, JavaScriptCompiler) {
+(((Compiler, JavaScriptCompiler) => {
   // the foundHelper register will disambiguate helper lookup from finding a
   // function in a context. This is necessary for mustache compatibility, which
   // requires that context functions in blocks are evaluated by blockHelperMissing,
@@ -867,8 +886,12 @@ Handlebars.JavaScriptCompiler = function() {};
   Compiler.prototype = {
     compiler: Compiler,
 
-    disassemble: function() {
-      var opcodes = this.opcodes, opcode, out = [], params, param;
+    disassemble() {
+      var opcodes = this.opcodes;
+      var opcode;
+      var out = [];
+      var params;
+      var param;
 
       for (var i=0, l=opcodes.length; i<l; i++) {
         opcode = opcodes[i];
@@ -890,15 +913,15 @@ Handlebars.JavaScriptCompiler = function() {};
 
       return out.join("\n");
     },
-    equals: function(other) {
+    equals(other) {
       var len = this.opcodes.length;
       if (other.opcodes.length !== len) {
         return false;
       }
 
       for (var i = 0; i < len; i++) {
-        var opcode = this.opcodes[i],
-            otherOpcode = other.opcodes[i];
+        var opcode = this.opcodes[i];
+        var otherOpcode = other.opcodes[i];
         if (opcode.opcode !== otherOpcode.opcode || opcode.args.length !== otherOpcode.args.length) {
           return false;
         }
@@ -913,7 +936,7 @@ Handlebars.JavaScriptCompiler = function() {};
 
     guid: 0,
 
-    compile: function(program, options) {
+    compile(program, options) {
       this.children = [];
       this.depths = {list: []};
       this.options = options;
@@ -938,12 +961,13 @@ Handlebars.JavaScriptCompiler = function() {};
       return this.program(program);
     },
 
-    accept: function(node) {
+    accept(node) {
       return this[node.type](node);
     },
 
-    program: function(program) {
-      var statements = program.statements, statement;
+    program(program) {
+      var statements = program.statements;
+      var statement;
       this.opcodes = [];
 
       for(var i=0, l=statements.length; i<l; i++) {
@@ -952,16 +976,15 @@ Handlebars.JavaScriptCompiler = function() {};
       }
       this.isSimple = l === 1;
 
-      this.depths.list = this.depths.list.sort(function(a, b) {
-        return a - b;
-      });
+      this.depths.list = this.depths.list.sort((a, b) => a - b);
 
       return this;
     },
 
-    compileProgram: function(program) {
+    compileProgram(program) {
       var result = new this.compiler().compile(program, this.options);
-      var guid = this.guid++, depth;
+      var guid = this.guid++;
+      var depth;
 
       this.usePartial = this.usePartial || result.usePartial;
 
@@ -977,10 +1000,10 @@ Handlebars.JavaScriptCompiler = function() {};
       return guid;
     },
 
-    block: function(block) {
-      var mustache = block.mustache,
-          program = block.program,
-          inverse = block.inverse;
+    block(block) {
+      var mustache = block.mustache;
+      var program = block.program;
+      var inverse = block.inverse;
 
       if (program) {
         program = this.compileProgram(program);
@@ -1017,8 +1040,10 @@ Handlebars.JavaScriptCompiler = function() {};
       this.opcode('append');
     },
 
-    hash: function(hash) {
-      var pairs = hash.pairs, pair, val;
+    hash(hash) {
+      var pairs = hash.pairs;
+      var pair;
+      var val;
 
       this.opcode('pushHash');
 
@@ -1037,7 +1062,7 @@ Handlebars.JavaScriptCompiler = function() {};
       this.opcode('popHash');
     },
 
-    partial: function(partial) {
+    partial(partial) {
       var partialName = partial.partialName;
       this.usePartial = true;
 
@@ -1051,11 +1076,11 @@ Handlebars.JavaScriptCompiler = function() {};
       this.opcode('append');
     },
 
-    content: function(content) {
+    content(content) {
       this.opcode('appendContent', content.string);
     },
 
-    mustache: function(mustache) {
+    mustache(mustache) {
       var options = this.options;
       var type = this.classifyMustache(mustache);
 
@@ -1074,10 +1099,10 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    ambiguousMustache: function(mustache, program, inverse) {
-      var id = mustache.id,
-          name = id.parts[0],
-          isBlock = program != null || inverse != null;
+    ambiguousMustache(mustache, program, inverse) {
+      var id = mustache.id;
+      var name = id.parts[0];
+      var isBlock = program != null || inverse != null;
 
       this.opcode('getContext', id.depth);
 
@@ -1087,7 +1112,7 @@ Handlebars.JavaScriptCompiler = function() {};
       this.opcode('invokeAmbiguous', name, isBlock);
     },
 
-    simpleMustache: function(mustache) {
+    simpleMustache(mustache) {
       var id = mustache.id;
 
       if (id.type === 'DATA') {
@@ -1104,9 +1129,9 @@ Handlebars.JavaScriptCompiler = function() {};
       this.opcode('resolvePossibleLambda');
     },
 
-    helperMustache: function(mustache, program, inverse) {
-      var params = this.setupFullMustacheParams(mustache, program, inverse),
-          name = mustache.id.parts[0];
+    helperMustache(mustache, program, inverse) {
+      var params = this.setupFullMustacheParams(mustache, program, inverse);
+      var name = mustache.id.parts[0];
 
       if (this.options.knownHelpers[name]) {
         this.opcode('invokeKnownHelper', params.length, name);
@@ -1117,7 +1142,7 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    ID: function(id) {
+    ID(id) {
       this.addDepth(id.depth);
       this.opcode('getContext', id.depth);
 
@@ -1133,35 +1158,35 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    DATA: function(data) {
+    DATA(data) {
       this.options.data = true;
       this.opcode('lookupData', data.id);
     },
 
-    STRING: function(string) {
+    STRING(string) {
       this.opcode('pushString', string.string);
     },
 
-    INTEGER: function(integer) {
+    INTEGER(integer) {
       this.opcode('pushLiteral', integer.integer);
     },
 
-    BOOLEAN: function(bool) {
+    BOOLEAN(bool) {
       this.opcode('pushLiteral', bool.bool);
     },
 
-    comment: function() {},
+    comment() {},
 
     // HELPERS
-    opcode: function(name) {
+    opcode(name) {
       this.opcodes.push({ opcode: name, args: [].slice.call(arguments, 1) });
     },
 
-    declare: function(name, value) {
-      this.opcodes.push({ opcode: 'DECLARE', name: name, value: value });
+    declare(name, value) {
+      this.opcodes.push({ opcode: 'DECLARE', name, value });
     },
 
-    addDepth: function(depth) {
+    addDepth(depth) {
       if(isNaN(depth)) { throw new Error("EWOT"); }
       if(depth === 0) { return; }
 
@@ -1171,7 +1196,7 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    classifyMustache: function(mustache) {
+    classifyMustache(mustache) {
       var isHelper   = mustache.isHelper;
       var isEligible = mustache.eligibleHelper;
       var options    = this.options;
@@ -1192,8 +1217,9 @@ Handlebars.JavaScriptCompiler = function() {};
       else { return "simple"; }
     },
 
-    pushParams: function(params) {
-      var i = params.length, param;
+    pushParams(params) {
+      var i = params.length;
+      var param;
 
       while(i--) {
         param = params[i];
@@ -1211,7 +1237,7 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    setupMustacheParams: function(mustache) {
+    setupMustacheParams(mustache) {
       var params = mustache.params;
       this.pushParams(params);
 
@@ -1225,7 +1251,7 @@ Handlebars.JavaScriptCompiler = function() {};
     },
 
     // this will replace setupMustacheParams when we're done
-    setupFullMustacheParams: function(mustache, program, inverse) {
+    setupFullMustacheParams(mustache, program, inverse) {
       var params = mustache.params;
       this.pushParams(params);
 
@@ -1249,7 +1275,7 @@ Handlebars.JavaScriptCompiler = function() {};
   JavaScriptCompiler.prototype = {
     // PUBLIC API: You can override these methods in a subclass to provide
     // alternative compiled forms for name lookup and buffering semantics
-    nameLookup: function(parent, name /* , type*/) {
+    nameLookup(parent, name /* , type*/) {
       if (/^[0-9]+$/.test(name)) {
         return parent + "[" + name + "]";
       } else if (JavaScriptCompiler.isValidJavaScriptVariableName(name)) {
@@ -1260,26 +1286,26 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    appendToBuffer: function(string) {
+    appendToBuffer(string) {
       if (this.environment.isSimple) {
         return "return " + string + ";";
       } else {
         return {
           appendToBuffer: true,
           content: string,
-          toString: function() { return "buffer += " + string + ";"; }
+          toString() { return "buffer += " + string + ";"; }
         };
       }
     },
 
-    initializeBuffer: function() {
+    initializeBuffer() {
       return this.quotedString("");
     },
 
     namespace: "Handlebars",
     // END PUBLIC API
 
-    compile: function(environment, options, context, asObject) {
+    compile(environment, options, context, asObject) {
       this.environment = environment;
       this.options = options || {};
 
@@ -1303,7 +1329,8 @@ Handlebars.JavaScriptCompiler = function() {};
 
       this.compileChildren(environment, options);
 
-      var opcodes = environment.opcodes, opcode;
+      var opcodes = environment.opcodes;
+      var opcode;
 
       this.i = 0;
 
@@ -1313,23 +1340,23 @@ Handlebars.JavaScriptCompiler = function() {};
         if(opcode.opcode === 'DECLARE') {
           this[opcode.name] = opcode.value;
         } else {
-          this[opcode.opcode].apply(this, opcode.args);
+          this[opcode.opcode](...opcode.args);
         }
       }
 
       return this.createFunctionContext(asObject);
     },
 
-    nextOpcode: function() {
+    nextOpcode() {
       var opcodes = this.environment.opcodes;
       return opcodes[this.i + 1];
     },
 
-    eat: function() {
+    eat() {
       this.i = this.i + 1;
     },
 
-    preamble: function() {
+    preamble() {
       var out = [];
 
       if (!this.isChild) {
@@ -1354,7 +1381,7 @@ Handlebars.JavaScriptCompiler = function() {};
       this.source = out;
     },
 
-    createFunctionContext: function(asObject) {
+    createFunctionContext(asObject) {
       var locals = this.stackVars.concat(this.registers.list);
 
       if(locals.length > 0) {
@@ -1391,8 +1418,8 @@ Handlebars.JavaScriptCompiler = function() {};
       var source = this.mergeSource();
 
       if (!this.isChild) {
-        var revision = Handlebars.COMPILER_REVISION,
-            versions = Handlebars.REVISION_CHANGES[revision];
+        var revision = Handlebars.COMPILER_REVISION;
+        var versions = Handlebars.REVISION_CHANGES[revision];
         source = "this.compilerInfo = ["+revision+",'"+versions+"'];\n"+source;
       }
 
@@ -1406,11 +1433,12 @@ Handlebars.JavaScriptCompiler = function() {};
         return functionSource;
       }
     },
-    mergeSource: function() {
+    mergeSource() {
       // WARN: We are not handling the case where buffer is still populated as the source should
       // not have buffer append operations as their final action.
-      var source = '',
-          buffer;
+      var source = '';
+
+      var buffer;
       for (var i = 0, len = this.source.length; i < len; i++) {
         var line = this.source[i];
         if (line.appendToBuffer) {
@@ -1439,13 +1467,13 @@ Handlebars.JavaScriptCompiler = function() {};
     // `{{#foo}}...{{/foo}}`, resolve the value of `foo`, and
     // replace it on the stack with the result of properly
     // invoking blockHelperMissing.
-    blockValue: function() {
+    blockValue() {
       this.context.aliases.blockHelperMissing = 'helpers.blockHelperMissing';
 
       var params = ["depth0"];
       this.setupParams(0, params);
 
-      this.replaceStack(function(current) {
+      this.replaceStack(current => {
         params.splice(1, 0, current);
         return "blockHelperMissing.call(" + params.join(", ") + ")";
       });
@@ -1457,7 +1485,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // Compiler value, before: lastHelper=value of last found helper, if any
     // On stack, after, if no lastHelper: same as [blockValue]
     // On stack, after, if lastHelper: value
-    ambiguousBlockValue: function() {
+    ambiguousBlockValue() {
       this.context.aliases.blockHelperMissing = 'helpers.blockHelperMissing';
 
       var params = ["depth0"];
@@ -1478,7 +1506,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // On stack, after: ...
     //
     // Appends the string value of `content` to the current buffer
-    appendContent: function(content) {
+    appendContent(content) {
       this.source.push(this.appendToBuffer(this.quotedString(content)));
     },
 
@@ -1491,7 +1519,7 @@ Handlebars.JavaScriptCompiler = function() {};
     //
     // If `value` is truthy, or 0, it is coerced into a string and appended
     // Otherwise, the empty string is appended
-    append: function() {
+    append() {
       // Force anything that is inlined onto the stack so we don't have duplication
       // when we examine local
       this.flushInline();
@@ -1508,7 +1536,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // On stack, after: ...
     //
     // Escape `value` and append it to the buffer
-    appendEscaped: function() {
+    appendEscaped() {
       this.context.aliases.escapeExpression = 'this.escapeExpression';
 
       this.source.push(this.appendToBuffer("escapeExpression(" + this.popStack() + ")"));
@@ -1521,7 +1549,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // Compiler value, after: lastContext=depth
     //
     // Set the value of the `lastContext` compiler value to the depth
-    getContext: function(depth) {
+    getContext(depth) {
       if(this.lastContext !== depth) {
         this.lastContext = depth;
       }
@@ -1534,7 +1562,7 @@ Handlebars.JavaScriptCompiler = function() {};
     //
     // Looks up the value of `name` on the current context and pushes
     // it onto the stack.
-    lookupOnContext: function(name) {
+    lookupOnContext(name) {
       this.push(this.nameLookup('depth' + this.lastContext, name, 'context'));
     },
 
@@ -1544,7 +1572,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // On stack, after: currentContext, ...
     //
     // Pushes the value of the current context onto the stack.
-    pushContext: function() {
+    pushContext() {
       this.pushStackLiteral('depth' + this.lastContext);
     },
 
@@ -1555,12 +1583,10 @@ Handlebars.JavaScriptCompiler = function() {};
     //
     // If the `value` is a lambda, replace it on the stack by
     // the return value of the lambda
-    resolvePossibleLambda: function() {
+    resolvePossibleLambda() {
       this.context.aliases.functionType = '"function"';
 
-      this.replaceStack(function(current) {
-        return "typeof " + current + " === functionType ? " + current + ".apply(depth0) : " + current;
-      });
+      this.replaceStack(current => "typeof " + current + " === functionType ? " + current + ".apply(depth0) : " + current);
     },
 
     // [lookup]
@@ -1570,7 +1596,7 @@ Handlebars.JavaScriptCompiler = function() {};
     //
     // Replace the value on the stack with the result of looking
     // up `name` on `value`
-    lookup: function(name) {
+    lookup(name) {
       this.replaceStack(function(current) {
         return current + " == null || " + current + " === false ? " + current + " : " + this.nameLookup(current, name, 'context');
       });
@@ -1582,7 +1608,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // On stack, after: data[id], ...
     //
     // Push the result of looking up `id` on the current data
-    lookupData: function(id) {
+    lookupData(id) {
       this.push(this.nameLookup('data', id, 'data'));
     },
 
@@ -1594,7 +1620,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // This opcode is designed for use in string mode, which
     // provides the string value of a parameter along with its
     // depth rather than resolving it immediately.
-    pushStringParam: function(string, type) {
+    pushStringParam(string, type) {
       this.pushStackLiteral('depth' + this.lastContext);
 
       this.pushString(type);
@@ -1606,17 +1632,17 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    emptyHash: function() {
+    emptyHash() {
       this.pushStackLiteral('{}');
 
       if (this.options.stringParams) {
         this.register('hashTypes', '{}');
       }
     },
-    pushHash: function() {
+    pushHash() {
       this.hash = {values: [], types: []};
     },
-    popHash: function() {
+    popHash() {
       var hash = this.hash;
       this.hash = undefined;
 
@@ -1632,7 +1658,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // On stack, after: quotedString(string), ...
     //
     // Push a quoted version of `string` onto the stack
-    pushString: function(string) {
+    pushString(string) {
       this.pushStackLiteral(this.quotedString(string));
     },
 
@@ -1642,7 +1668,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // On stack, after: expr, ...
     //
     // Push an expression onto the stack
-    push: function(expr) {
+    push(expr) {
       this.inlineStack.push(expr);
       return expr;
     },
@@ -1655,7 +1681,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // Pushes a value onto the stack. This operation prevents
     // the compiler from creating a temporary variable to hold
     // it.
-    pushLiteral: function(value) {
+    pushLiteral(value) {
       this.pushStackLiteral(value);
     },
 
@@ -1667,7 +1693,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // Push a program expression onto the stack. This takes
     // a compile-time guid and converts it into a runtime-accessible
     // expression.
-    pushProgram: function(guid) {
+    pushProgram(guid) {
       if (guid != null) {
         this.pushStackLiteral(this.programExpression(guid));
       } else {
@@ -1684,17 +1710,15 @@ Handlebars.JavaScriptCompiler = function() {};
     // and pushes the helper's return value onto the stack.
     //
     // If the helper is not found, `helperMissing` is called.
-    invokeHelper: function(paramSize, name) {
+    invokeHelper(paramSize, name) {
       this.context.aliases.helperMissing = 'helpers.helperMissing';
 
       var helper = this.lastHelper = this.setupHelper(paramSize, name, true);
 
       this.push(helper.name);
-      this.replaceStack(function(name) {
-        return name + ' ? ' + name + '.call(' +
-            helper.callParams + ") " + ": helperMissing.call(" +
-            helper.helperMissingParams + ")";
-      });
+      this.replaceStack(name => name + ' ? ' + name + '.call(' +
+          helper.callParams + ") " + ": helperMissing.call(" +
+          helper.helperMissingParams + ")");
     },
 
     // [invokeKnownHelper]
@@ -1704,7 +1728,7 @@ Handlebars.JavaScriptCompiler = function() {};
     //
     // This operation is used when the helper is known to exist,
     // so a `helperMissing` fallback is not required.
-    invokeKnownHelper: function(paramSize, name) {
+    invokeKnownHelper(paramSize, name) {
       var helper = this.setupHelper(paramSize, name);
       this.push(helper.name + ".call(" + helper.callParams + ")");
     },
@@ -1721,7 +1745,7 @@ Handlebars.JavaScriptCompiler = function() {};
     // This operation emits more code than the other options,
     // and can be avoided by passing the `knownHelpers` and
     // `knownHelpersOnly` flags at compile-time.
-    invokeAmbiguous: function(name, helperCall) {
+    invokeAmbiguous(name, helperCall) {
       this.context.aliases.functionType = '"function"';
 
       this.pushStackLiteral('{}');    // Hash value
@@ -1743,7 +1767,7 @@ Handlebars.JavaScriptCompiler = function() {};
     //
     // This operation pops off a context, invokes a partial with that context,
     // and pushes the result of the invocation back.
-    invokePartial: function(name) {
+    invokePartial(name) {
       var params = [this.nameLookup('partials', name, 'partial'), "'" + name + "'", this.popStack(), "helpers", "partials"];
 
       if (this.options.data) {
@@ -1761,9 +1785,9 @@ Handlebars.JavaScriptCompiler = function() {};
     //
     // Pops a value and hash off the stack, assigns `hash[key] = value`
     // and pushes the hash back onto the stack.
-    assignToHash: function(key) {
-      var value = this.popStack(),
-          type;
+    assignToHash(key) {
+      var value = this.popStack();
+      var type;
 
       if (this.options.stringParams) {
         type = this.popStack();
@@ -1781,8 +1805,10 @@ Handlebars.JavaScriptCompiler = function() {};
 
     compiler: JavaScriptCompiler,
 
-    compileChildren: function(environment, options) {
-      var children = environment.children, child, compiler;
+    compileChildren(environment, options) {
+      var children = environment.children;
+      var child;
+      var compiler;
 
       for(var i=0, l=children.length; i<l; i++) {
         child = children[i];
@@ -1803,7 +1829,7 @@ Handlebars.JavaScriptCompiler = function() {};
         }
       }
     },
-    matchExistingProgram: function(child) {
+    matchExistingProgram(child) {
       for (var i = 0, len = this.context.environments.length; i < len; i++) {
         var environment = this.context.environments[i];
         if (environment && environment.equals(child)) {
@@ -1812,15 +1838,16 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    programExpression: function(guid) {
+    programExpression(guid) {
       this.context.aliases.self = "this";
 
       if(guid == null) {
         return "self.noop";
       }
 
-      var child = this.environment.children[guid],
-          depths = child.depths.list, depth;
+      var child = this.environment.children[guid];
+      var depths = child.depths.list;
+      var depth;
 
       var programParams = [child.index, child.name, "data"];
 
@@ -1839,23 +1866,23 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    register: function(name, val) {
+    register(name, val) {
       this.useRegister(name);
       this.source.push(name + " = " + val + ";");
     },
 
-    useRegister: function(name) {
+    useRegister(name) {
       if(!this.registers[name]) {
         this.registers[name] = true;
         this.registers.list.push(name);
       }
     },
 
-    pushStackLiteral: function(item) {
+    pushStackLiteral(item) {
       return this.push(new Literal(item));
     },
 
-    pushStack: function(item) {
+    pushStack(item) {
       this.flushInline();
 
       var stack = this.incrStack();
@@ -1866,10 +1893,10 @@ Handlebars.JavaScriptCompiler = function() {};
       return stack;
     },
 
-    replaceStack: function(callback) {
-      var prefix = '',
-          inline = this.isInline(),
-          stack;
+    replaceStack(callback) {
+      var prefix = '';
+      var inline = this.isInline();
+      var stack;
 
       // If we are currently inline then we want to merge the inline statement into the
       // replacement statement via ','
@@ -1908,19 +1935,19 @@ Handlebars.JavaScriptCompiler = function() {};
       return stack;
     },
 
-    nextStack: function() {
+    nextStack() {
       return this.pushStack();
     },
 
-    incrStack: function() {
+    incrStack() {
       this.stackSlot++;
       if(this.stackSlot > this.stackVars.length) { this.stackVars.push("stack" + this.stackSlot); }
       return this.topStackName();
     },
-    topStackName: function() {
+    topStackName() {
       return "stack" + this.stackSlot;
     },
-    flushInline: function() {
+    flushInline() {
       var inlineStack = this.inlineStack;
       if (inlineStack.length) {
         this.inlineStack = [];
@@ -1934,13 +1961,13 @@ Handlebars.JavaScriptCompiler = function() {};
         }
       }
     },
-    isInline: function() {
+    isInline() {
       return this.inlineStack.length;
     },
 
-    popStack: function(wrapped) {
-      var inline = this.isInline(),
-          item = (inline ? this.inlineStack : this.compileStack).pop();
+    popStack(wrapped) {
+      var inline = this.isInline();
+      var item = (inline ? this.inlineStack : this.compileStack).pop();
 
       if (!wrapped && (item instanceof Literal)) {
         return item.value;
@@ -1952,9 +1979,9 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    topStack: function(wrapped) {
-      var stack = (this.isInline() ? this.inlineStack : this.compileStack),
-          item = stack[stack.length - 1];
+    topStack(wrapped) {
+      var stack = (this.isInline() ? this.inlineStack : this.compileStack);
+      var item = stack[stack.length - 1];
 
       if (!wrapped && (item instanceof Literal)) {
         return item.value;
@@ -1963,7 +1990,7 @@ Handlebars.JavaScriptCompiler = function() {};
       }
     },
 
-    quotedString: function(str) {
+    quotedString(str) {
       return '"' + str
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"')
@@ -1971,13 +1998,13 @@ Handlebars.JavaScriptCompiler = function() {};
         .replace(/\r/g, '\\r') + '"';
     },
 
-    setupHelper: function(paramSize, name, missingParams) {
+    setupHelper(paramSize, name, missingParams) {
       var params = [];
       this.setupParams(paramSize, params, missingParams);
       var foundHelper = this.nameLookup('helpers', name, 'helper');
 
       return {
-        params: params,
+        params,
         name: foundHelper,
         callParams: ["depth0"].concat(params).join(", "),
         helperMissingParams: missingParams && ["depth0", this.quotedString(name)].concat(params).join(", ")
@@ -1986,8 +2013,13 @@ Handlebars.JavaScriptCompiler = function() {};
 
     // the params and contexts arguments are passed in arrays
     // to fill in
-    setupParams: function(paramSize, params, useRegister) {
-      var options = [], contexts = [], types = [], param, inverse, program;
+    setupParams(paramSize, params, useRegister) {
+      var options = [];
+      var contexts = [];
+      var types = [];
+      var param;
+      var inverse;
+      var program;
 
       options.push("hash:" + this.popStack());
 
@@ -2066,16 +2098,16 @@ Handlebars.JavaScriptCompiler = function() {};
     compilerWords[reservedWords[i]] = true;
   }
 
-  JavaScriptCompiler.isValidJavaScriptVariableName = function(name) {
+  JavaScriptCompiler.isValidJavaScriptVariableName = name => {
     if(!JavaScriptCompiler.RESERVED_WORDS[name] && /^[a-zA-Z_$][0-9a-zA-Z_$]+$/.test(name)) {
       return true;
     }
     return false;
   };
 
-})(Handlebars.Compiler, Handlebars.JavaScriptCompiler);
+}))(Handlebars.Compiler, Handlebars.JavaScriptCompiler);
 
-Handlebars.precompile = function(input, options) {
+Handlebars.precompile = (input, options) => {
   if (!input || (typeof input !== 'string' && input.constructor !== Handlebars.AST.ProgramNode)) {
     throw new Handlebars.Exception("You must pass a string or Handlebars AST to Handlebars.compile. You passed " + input);
   }
@@ -2089,7 +2121,7 @@ Handlebars.precompile = function(input, options) {
   return new Handlebars.JavaScriptCompiler().compile(environment, options);
 };
 
-Handlebars.compile = function(input, options) {
+Handlebars.compile = (input, options) => {
   if (!input || (typeof input !== 'string' && input.constructor !== Handlebars.AST.ProgramNode)) {
     throw new Handlebars.Exception("You must pass a string or Handlebars AST to Handlebars.compile. You passed " + input);
   }
@@ -2117,13 +2149,13 @@ Handlebars.compile = function(input, options) {
 ;
 // lib/handlebars/runtime.js
 Handlebars.VM = {
-  template: function(templateSpec) {
+  template(templateSpec) {
     // Just add water
     var container = {
       escapeExpression: Handlebars.Utils.escapeExpression,
       invokePartial: Handlebars.VM.invokePartial,
       programs: [],
-      program: function(i, fn, data) {
+      program(i, fn, data) {
         var programWrapper = this.programs[i];
         if(data) {
           return Handlebars.VM.program(fn, data);
@@ -2139,18 +2171,18 @@ Handlebars.VM = {
       compilerInfo: null
     };
 
-    return function(context, options) {
+    return (context, options) => {
       options = options || {};
       var result = templateSpec.call(container, Handlebars, context, options.helpers, options.partials, options.data);
 
-      var compilerInfo = container.compilerInfo || [],
-          compilerRevision = compilerInfo[0] || 1,
-          currentRevision = Handlebars.COMPILER_REVISION;
+      var compilerInfo = container.compilerInfo || [];
+      var compilerRevision = compilerInfo[0] || 1;
+      var currentRevision = Handlebars.COMPILER_REVISION;
 
       if (compilerRevision !== currentRevision) {
         if (compilerRevision < currentRevision) {
-          var runtimeVersions = Handlebars.REVISION_CHANGES[currentRevision],
-              compilerVersions = Handlebars.REVISION_CHANGES[compilerRevision];
+          var runtimeVersions = Handlebars.REVISION_CHANGES[currentRevision];
+          var compilerVersions = Handlebars.REVISION_CHANGES[compilerRevision];
           throw "Template was precompiled with an older version of Handlebars than the current runtime. "+
                 "Please update your precompiler to a newer version ("+runtimeVersions+") or downgrade your runtime to an older version ("+compilerVersions+").";
         } else {
@@ -2164,7 +2196,7 @@ Handlebars.VM = {
     };
   },
 
-  programWithDepth: function(fn, data, $depth) {
+  programWithDepth(fn, data, $depth) {
     var args = Array.prototype.slice.call(arguments, 2);
 
     return function(context, options) {
@@ -2173,16 +2205,16 @@ Handlebars.VM = {
       return fn.apply(this, [context, options.data || data].concat(args));
     };
   },
-  program: function(fn, data) {
-    return function(context, options) {
+  program(fn, data) {
+    return (context, options) => {
       options = options || {};
 
       return fn(context, options.data || data);
     };
   },
-  noop: function() { return ""; },
-  invokePartial: function(partial, name, context, helpers, partials, data) {
-    var options = { helpers: helpers, partials: partials, data: data };
+  noop() { return ""; },
+  invokePartial(partial, name, context, helpers, partials, data) {
+    var options = { helpers, partials, data };
 
     if(partial === undefined) {
       throw new Handlebars.Exception("The partial " + name + " could not be found");
