@@ -1,9 +1,7 @@
 // Generated on 2013-04-12 using generator-ember 0.2.3
 'use strict';
 var lrSnippet = require('grunt-contrib-livereload/lib/utils').livereloadSnippet;
-var mountFolder = function (connect, dir) {
-    return connect.static(require('path').resolve(dir));
-};
+var mountFolder = (connect, dir) => connect.static(require('path').resolve(dir));
 
 // # Globbing
 // for performance reasons we're only matching one level down:
@@ -11,7 +9,7 @@ var mountFolder = function (connect, dir) {
 // use this if you want to match all subfolders:
 // 'test/spec/**/*.js'
 
-module.exports = function (grunt) {
+module.exports = grunt => {
     // load all grunt tasks
     require('matchdep').filterDev('grunt-*').forEach(grunt.loadNpmTasks);
 
@@ -58,7 +56,7 @@ module.exports = function (grunt) {
             },
             livereload: {
                 options: {
-                    middleware: function (connect) {
+                    middleware(connect) {
                         return [
                             lrSnippet,
                             mountFolder(connect, '.tmp'),
@@ -69,7 +67,7 @@ module.exports = function (grunt) {
             },
             test: {
                 options: {
-                    middleware: function (connect) {
+                    middleware(connect) {
                         return [
                             mountFolder(connect, '.tmp'),
                             mountFolder(connect, 'test')
@@ -79,7 +77,7 @@ module.exports = function (grunt) {
             },
             dist: {
                 options: {
-                    middleware: function (connect) {
+                    middleware(connect) {
                         return [
                             mountFolder(connect, 'dist')
                         ];
@@ -286,7 +284,7 @@ module.exports = function (grunt) {
         ember_templates: {
           compile: {
             options: {
-              templateName: function(sourceFile) {
+              templateName(sourceFile) {
                 var path_regex = new RegExp(yeomanConfig.app + "/templates/");
                 return sourceFile.replace(path_regex, '');
               }
@@ -301,7 +299,7 @@ module.exports = function (grunt) {
 
     grunt.renameTask('regarde', 'watch');
 
-    grunt.registerTask('server', function (target) {
+    grunt.registerTask('server', target => {
         if (target === 'dist') {
             return grunt.task.run(['build', 'open', 'connect:dist:keepalive']);
         }

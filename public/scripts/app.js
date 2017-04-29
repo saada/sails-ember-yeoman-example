@@ -2,12 +2,12 @@ App = Ember.Application.create({
 	rootElement: $('#ember')
 });
 
-App.Router.map(function() {
+App.Router.map(() => {
   // put your routes here
 });
 
 App.IndexRoute = Ember.Route.extend({
-  model: function() {
+  model() {
     return ['pretty', 'damn', 'awesome'];
   }
 });

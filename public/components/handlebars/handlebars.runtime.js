@@ -27,150 +27,152 @@ THE SOFTWARE.
 /*jshint eqnull:true*/
 this.Handlebars = {};
 
-(function(Handlebars) {
+((Handlebars => {
+  Handlebars.VERSION = "1.0.0-rc.3";
+  Handlebars.COMPILER_REVISION = 2;
 
-Handlebars.VERSION = "1.0.0-rc.3";
-Handlebars.COMPILER_REVISION = 2;
+  Handlebars.REVISION_CHANGES = {
+    1: '<= 1.0.rc.2', // 1.0.rc.2 is actually rev2 but doesn't report it
+    2: '>= 1.0.0-rc.3'
+  };
 
-Handlebars.REVISION_CHANGES = {
-  1: '<= 1.0.rc.2', // 1.0.rc.2 is actually rev2 but doesn't report it
-  2: '>= 1.0.0-rc.3'
-};
+  Handlebars.helpers  = {};
+  Handlebars.partials = {};
 
-Handlebars.helpers  = {};
-Handlebars.partials = {};
+  Handlebars.registerHelper = function(name, fn, inverse) {
+    if(inverse) { fn.not = inverse; }
+    this.helpers[name] = fn;
+  };
 
-Handlebars.registerHelper = function(name, fn, inverse) {
-  if(inverse) { fn.not = inverse; }
-  this.helpers[name] = fn;
-};
+  Handlebars.registerPartial = function(name, str) {
+    this.partials[name] = str;
+  };
 
-Handlebars.registerPartial = function(name, str) {
-  this.partials[name] = str;
-};
-
-Handlebars.registerHelper('helperMissing', function(arg) {
-  if(arguments.length === 2) {
-    return undefined;
-  } else {
-    throw new Error("Could not find property '" + arg + "'");
-  }
-});
-
-var toString = Object.prototype.toString, functionType = "[object Function]";
-
-Handlebars.registerHelper('blockHelperMissing', function(context, options) {
-  var inverse = options.inverse || function() {}, fn = options.fn;
-
-
-  var ret = "";
-  var type = toString.call(context);
-
-  if(type === functionType) { context = context.call(this); }
-
-  if(context === true) {
-    return fn(this);
-  } else if(context === false || context == null) {
-    return inverse(this);
-  } else if(type === "[object Array]") {
-    if(context.length > 0) {
-      return Handlebars.helpers.each(context, options);
+  Handlebars.registerHelper('helperMissing', function(arg) {
+    if(arguments.length === 2) {
+      return undefined;
     } else {
+      throw new Error("Could not find property '" + arg + "'");
+    }
+  });
+
+  var toString = Object.prototype.toString;
+  var functionType = "[object Function]";
+
+  Handlebars.registerHelper('blockHelperMissing', function(context, options) {
+    var inverse = options.inverse || (() => {});
+    var fn = options.fn;
+
+
+    var ret = "";
+    var type = toString.call(context);
+
+    if(type === functionType) { context = context.call(this); }
+
+    if(context === true) {
+      return fn(this);
+    } else if(context === false || context == null) {
       return inverse(this);
-    }
-  } else {
-    return fn(context);
-  }
-});
-
-Handlebars.K = function() {};
-
-Handlebars.createFrame = Object.create || function(object) {
-  Handlebars.K.prototype = object;
-  var obj = new Handlebars.K();
-  Handlebars.K.prototype = null;
-  return obj;
-};
-
-Handlebars.logger = {
-  DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, level: 3,
-
-  methodMap: {0: 'debug', 1: 'info', 2: 'warn', 3: 'error'},
-
-  // can be overridden in the host environment
-  log: function(level, obj) {
-    if (Handlebars.logger.level <= level) {
-      var method = Handlebars.logger.methodMap[level];
-      if (typeof console !== 'undefined' && console[method]) {
-        console[method].call(console, obj);
-      }
-    }
-  }
-};
-
-Handlebars.log = function(level, obj) { Handlebars.logger.log(level, obj); };
-
-Handlebars.registerHelper('each', function(context, options) {
-  var fn = options.fn, inverse = options.inverse;
-  var i = 0, ret = "", data;
-
-  if (options.data) {
-    data = Handlebars.createFrame(options.data);
-  }
-
-  if(context && typeof context === 'object') {
-    if(context instanceof Array){
-      for(var j = context.length; i<j; i++) {
-        if (data) { data.index = i; }
-        ret = ret + fn(context[i], { data: data });
+    } else if(type === "[object Array]") {
+      if(context.length > 0) {
+        return Handlebars.helpers.each(context, options);
+      } else {
+        return inverse(this);
       }
     } else {
-      for(var key in context) {
-        if(context.hasOwnProperty(key)) {
-          if(data) { data.key = key; }
-          ret = ret + fn(context[key], {data: data});
-          i++;
+      return fn(context);
+    }
+  });
+
+  Handlebars.K = () => {};
+
+  Handlebars.createFrame = Object.create || (object => {
+    Handlebars.K.prototype = object;
+    var obj = new Handlebars.K();
+    Handlebars.K.prototype = null;
+    return obj;
+  });
+
+  Handlebars.logger = {
+    DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, level: 3,
+
+    methodMap: {0: 'debug', 1: 'info', 2: 'warn', 3: 'error'},
+
+    // can be overridden in the host environment
+    log(level, obj) {
+      if (Handlebars.logger.level <= level) {
+        var method = Handlebars.logger.methodMap[level];
+        if (typeof console !== 'undefined' && console[method]) {
+          console[method].call(console, obj);
         }
       }
     }
-  }
+  };
 
-  if(i === 0){
-    ret = inverse(this);
-  }
+  Handlebars.log = (level, obj) => { Handlebars.logger.log(level, obj); };
 
-  return ret;
-});
+  Handlebars.registerHelper('each', function(context, options) {
+    var fn = options.fn;
+    var inverse = options.inverse;
+    var i = 0;
+    var ret = "";
+    var data;
 
-Handlebars.registerHelper('if', function(context, options) {
-  var type = toString.call(context);
-  if(type === functionType) { context = context.call(this); }
+    if (options.data) {
+      data = Handlebars.createFrame(options.data);
+    }
 
-  if(!context || Handlebars.Utils.isEmpty(context)) {
-    return options.inverse(this);
-  } else {
-    return options.fn(this);
-  }
-});
+    if(context && typeof context === 'object') {
+      if(context instanceof Array){
+        for(var j = context.length; i<j; i++) {
+          if (data) { data.index = i; }
+          ret = ret + fn(context[i], { data });
+        }
+      } else {
+        for(var key in context) {
+          if(context.hasOwnProperty(key)) {
+            if(data) { data.key = key; }
+            ret = ret + fn(context[key], {data});
+            i++;
+          }
+        }
+      }
+    }
 
-Handlebars.registerHelper('unless', function(context, options) {
-  var fn = options.fn, inverse = options.inverse;
-  options.fn = inverse;
-  options.inverse = fn;
+    if(i === 0){
+      ret = inverse(this);
+    }
 
-  return Handlebars.helpers['if'].call(this, context, options);
-});
+    return ret;
+  });
 
-Handlebars.registerHelper('with', function(context, options) {
-  return options.fn(context);
-});
+  Handlebars.registerHelper('if', function(context, options) {
+    var type = toString.call(context);
+    if(type === functionType) { context = context.call(this); }
 
-Handlebars.registerHelper('log', function(context, options) {
-  var level = options.data && options.data.level != null ? parseInt(options.data.level, 10) : 1;
-  Handlebars.log(level, context);
-});
+    if(!context || Handlebars.Utils.isEmpty(context)) {
+      return options.inverse(this);
+    } else {
+      return options.fn(this);
+    }
+  });
 
-}(this.Handlebars));
+  Handlebars.registerHelper('unless', function(context, options) {
+    var fn = options.fn;
+    var inverse = options.inverse;
+    options.fn = inverse;
+    options.inverse = fn;
+
+    return Handlebars.helpers['if'].call(this, context, options);
+  });
+
+  Handlebars.registerHelper('with', (context, options) => options.fn(context));
+
+  Handlebars.registerHelper('log', (context, options) => {
+    var level = options.data && options.data.level != null ? parseInt(options.data.level, 10) : 1;
+    Handlebars.log(level, context);
+  });
+})(this.Handlebars));
 ;
 // lib/handlebars/utils.js
 
@@ -194,7 +196,7 @@ Handlebars.SafeString.prototype.toString = function() {
   return this.string.toString();
 };
 
-(function() {
+((() => {
   var escape = {
     "&": "&amp;",
     "<": "&lt;",
@@ -207,12 +209,10 @@ Handlebars.SafeString.prototype.toString = function() {
   var badChars = /[&<>"'`]/g;
   var possible = /[&<>"'`]/;
 
-  var escapeChar = function(chr) {
-    return escape[chr] || "&amp;";
-  };
+  var escapeChar = chr => escape[chr] || "&amp;";
 
   Handlebars.Utils = {
-    escapeExpression: function(string) {
+    escapeExpression(string) {
       // don't escape SafeStrings, since they're already safe
       if (string instanceof Handlebars.SafeString) {
         return string.toString();
@@ -224,7 +224,7 @@ Handlebars.SafeString.prototype.toString = function() {
       return string.replace(badChars, escapeChar);
     },
 
-    isEmpty: function(value) {
+    isEmpty(value) {
       if (!value && value !== 0) {
         return true;
       } else if(Object.prototype.toString.call(value) === "[object Array]" && value.length === 0) {
@@ -234,16 +234,16 @@ Handlebars.SafeString.prototype.toString = function() {
       }
     }
   };
-})();;
+}))();;
 // lib/handlebars/runtime.js
 Handlebars.VM = {
-  template: function(templateSpec) {
+  template(templateSpec) {
     // Just add water
     var container = {
       escapeExpression: Handlebars.Utils.escapeExpression,
       invokePartial: Handlebars.VM.invokePartial,
       programs: [],
-      program: function(i, fn, data) {
+      program(i, fn, data) {
         var programWrapper = this.programs[i];
         if(data) {
           return Handlebars.VM.program(fn, data);
@@ -259,18 +259,18 @@ Handlebars.VM = {
       compilerInfo: null
     };
 
-    return function(context, options) {
+    return (context, options) => {
       options = options || {};
       var result = templateSpec.call(container, Handlebars, context, options.helpers, options.partials, options.data);
 
-      var compilerInfo = container.compilerInfo || [],
-          compilerRevision = compilerInfo[0] || 1,
-          currentRevision = Handlebars.COMPILER_REVISION;
+      var compilerInfo = container.compilerInfo || [];
+      var compilerRevision = compilerInfo[0] || 1;
+      var currentRevision = Handlebars.COMPILER_REVISION;
 
       if (compilerRevision !== currentRevision) {
         if (compilerRevision < currentRevision) {
-          var runtimeVersions = Handlebars.REVISION_CHANGES[currentRevision],
-              compilerVersions = Handlebars.REVISION_CHANGES[compilerRevision];
+          var runtimeVersions = Handlebars.REVISION_CHANGES[currentRevision];
+          var compilerVersions = Handlebars.REVISION_CHANGES[compilerRevision];
           throw "Template was precompiled with an older version of Handlebars than the current runtime. "+
                 "Please update your precompiler to a newer version ("+runtimeVersions+") or downgrade your runtime to an older version ("+compilerVersions+").";
         } else {
@@ -284,7 +284,7 @@ Handlebars.VM = {
     };
   },
 
-  programWithDepth: function(fn, data, $depth) {
+  programWithDepth(fn, data, $depth) {
     var args = Array.prototype.slice.call(arguments, 2);
 
     return function(context, options) {
@@ -293,16 +293,16 @@ Handlebars.VM = {
       return fn.apply(this, [context, options.data || data].concat(args));
     };
   },
-  program: function(fn, data) {
-    return function(context, options) {
+  program(fn, data) {
+    return (context, options) => {
       options = options || {};
 
       return fn(context, options.data || data);
     };
   },
-  noop: function() { return ""; },
-  invokePartial: function(partial, name, context, helpers, partials, data) {
-    var options = { helpers: helpers, partials: partials, data: data };
+  noop() { return ""; },
+  invokePartial(partial, name, context, helpers, partials, data) {
+    var options = { helpers, partials, data };
 
     if(partial === undefined) {
       throw new Handlebars.Exception("The partial " + name + " could not be found");
